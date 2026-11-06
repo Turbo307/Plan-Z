@@ -1,65 +1,55 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
-import '@/global.css';
-
-import { Platform } from 'react-native';
-
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    //colores principales
+    background: "#E8DFC1",
+    surface: "#F5EED9",
+
+    //textos
+    text: "#253B30",
+    secondaryText: "#526B50",
+
+    //colores de acento
+    pink: "#C88B7C",
+    yellow: "#E8C477",
+    lavender: "#8C8175",
+    green: "#91BF79",
+    blue: "#83B7A5",
+
+    //bordes
+    border: "#315E43",
+
+    //colores adicionales
+    forest: "#315E43",
+    deepForest: "#192E2B",
+    grass: "#B4CF93",
+    wood: "#A66D4E",
+    stone: "#8C8175",
   },
+
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
-} as const;
+    //colores principales
+    background: "#192E2B",
+    surface: "#294438",
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+    //textos
+    text: "#F0E8D1",
+    secondaryText: "#B4C8A6",
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+    //colores de acento
+    pink: "#B77C70",
+    yellow: "#D4AD65",
+    lavender: "#9D9285",
+    green: "#567E58",
+    blue: "#568D82",
 
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
+    //bordes
+    border: "#87A17A",
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+    //colores adicionales
+    forest: "#315E43",
+    deepForest: "#102320",
+    grass: "#71996A",
+    wood: "#95664B",
+    stone: "#77756C",
+  },
+};

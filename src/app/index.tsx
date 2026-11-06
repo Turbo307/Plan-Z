@@ -1,98 +1,828 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+  AppState,
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "../constants/theme";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+type Activity = {
+  id: number;
+  title: string;
+  start: string;
+  end: string;
+  duration: string;
+  icon: IconName;
+  color: string;
+  completed: boolean;
+};
+
+// actividades temporales de demostracion
+const activities: Activity[] = [
+  {
+    id: 1,
+    title: "Medicina del abuelo",
+    start: "09:00",
+    end: "10:00",
+    duration: "1 hora",
+    icon: "document-text-outline",
+    color: "#568D58",
+    completed: true,
+  },
+  {
+    id: 2,
+    title: "Cita con el dentista",
+    start: "15:00",
+    end: "16:00",
+    duration: "1 hora",
+    icon: "medkit-outline",
+    color: "#D4AD65",
+    completed: false,
+  },
+  {
+    id: 3,
+    title: "Salir a correr al parque",
+    start: "18:00",
+    end: "18:30",
+    duration: "30 minutos",
+    icon: "walk-outline",
+    color: "#568D82",
+    completed: false,
+  },
+];
+
+const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
+
+// compara fechas sin la hora
+function isSameDay(a: Date, b: Date): boolean {
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
 }
 
+// genera la semana de lunes a domingo
+function getWeek(date: Date) {
+  const start = new Date(date);
+
+  const day = start.getDay();
+
+  // ajusta el inicio de semana al lunes
+  const difference = (day + 6) % 7;
+
+  start.setDate(start.getDate() - difference);
+  start.setHours(12, 0, 0, 0);
+
+  return DAYS.map((name, index) => {
+    const current = new Date(start);
+
+    current.setDate(start.getDate() + index);
+
+    return {
+      name,
+      date: current,
+    };
+  });
+}
+
+// sumar o restar dias a una fecha
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+
+  result.setDate(result.getDate() + days);
+
+  return result;
+}
+
+// formatear fechas en espanol
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export default function HomeScreen() {
+  const [darkMode, setDarkMode] = useState(false);
+
+  // fecha actual del dispositivo
+  const [today, setToday] = useState(() => new Date());
+
+  // dia seleccionado
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const colors = darkMode ? Colors.dark : Colors.light;
+
+  // semana del dia seleccionado
+  const week = getWeek(selectedDate);
+
+  // actualizar la fecha real al volver a la aplicacion
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        setToday(new Date());
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  // cambiar de semana
+  const changeWeek = (direction: number) => {
+    setSelectedDate((previous) => addDays(previous, direction * 7));
+  };
+
+  // regresar al dia actual
+  const goToToday = () => {
+    const current = new Date();
+
+    setToday(current);
+    setSelectedDate(current);
+  };
+
+  // muestra los ejemplos solo en el dia actual
+  const visibleActivities = isSameDay(selectedDate, today) ? activities : [];
+
+  const completed = visibleActivities.filter(
+    (activity) => activity.completed,
+  ).length;
+
+  const pending = visibleActivities.length - completed;
+
+  const monthLabel = selectedDate.toLocaleDateString("es-MX", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const selectedDayLabel = selectedDate.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+  });
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView
+      style={[styles.screen, { backgroundColor: colors.background }]}
+    >
+      <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* encabezado */}
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <View style={styles.brand}>
+              <MaterialCommunityIcons
+                name="fruit-citrus"
+                size={22}
+                color={colors.green}
+              />
+              <Text style={[styles.brandText, { color: colors.forest }]}>
+                PLAN-Z
+              </Text>
+            </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+            <Text style={[styles.greeting, { color: colors.text }]}>
+              Hola, Usuario
+            </Text>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+            <Text style={[styles.dateText, { color: colors.secondaryText }]}>
+              {formatDate(today)}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => setDarkMode(!darkMode)}
+            style={[styles.iconButton, { backgroundColor: colors.surface }]}
+          >
+            <Ionicons
+              name={darkMode ? "sunny-outline" : "moon-outline"}
+              size={23}
+              color={colors.text}
+            />
+          </Pressable>
+        </View>
+
+        {/* calendario semanal */}
+        <View
+          style={[
+            styles.calendarCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.calendarHeader}>
+            <Text style={[styles.monthTitle, { color: colors.text }]}>
+              {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+            </Text>
+
+            <View style={styles.calendarControls}>
+              <Pressable
+                onPress={() => changeWeek(-1)}
+                style={styles.calendarControl}
+              >
+                <Ionicons name="chevron-back" size={20} color={colors.text} />
+              </Pressable>
+
+              <Pressable onPress={goToToday} style={styles.calendarControl}>
+                <Ionicons
+                  name="today-outline"
+                  size={22}
+                  color={colors.forest}
+                />
+              </Pressable>
+
+              <Pressable
+                onPress={() => changeWeek(1)}
+                style={styles.calendarControl}
+              >
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.text}
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.weekRow}>
+            {week.map((item) => {
+              const selected = isSameDay(item.date, selectedDate);
+
+              const isToday = isSameDay(item.date, today);
+
+              return (
+                <Pressable
+                  key={item.date.toDateString()}
+                  onPress={() => setSelectedDate(item.date)}
+                  style={[
+                    styles.dayItem,
+                    selected && {
+                      backgroundColor: colors.forest,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayName,
+                      {
+                        color: selected ? "#FFFFFF" : colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.dayNumber,
+                      {
+                        color: selected ? "#FFFFFF" : colors.text,
+                      },
+                    ]}
+                  >
+                    {item.date.getDate()}
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.dayDot,
+                      {
+                        backgroundColor: isToday
+                          ? selected
+                            ? "#FFFFFF"
+                            : colors.forest
+                          : "transparent",
+                      },
+                    ]}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* resumen de actividades */}
+        <View style={styles.summaryRow}>
+          <View
+            style={[
+              styles.summaryItem,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name="clipboard-outline"
+              size={24}
+              color={colors.forest}
+            />
+
+            <Text style={[styles.summaryNumber, { color: colors.text }]}>
+              {visibleActivities.length}
+            </Text>
+
+            <Text
+              style={[styles.summaryLabel, { color: colors.secondaryText }]}
+            >
+              Actividades
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.summaryItem,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name="checkmark-circle-outline"
+              size={24}
+              color={colors.forest}
+            />
+
+            <Text style={[styles.summaryNumber, { color: colors.text }]}>
+              {completed}
+            </Text>
+
+            <Text
+              style={[styles.summaryLabel, { color: colors.secondaryText }]}
+            >
+              Completadas
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.summaryItem,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Ionicons name="time-outline" size={24} color={colors.wood} />
+
+            <Text style={[styles.summaryNumber, { color: colors.text }]}>
+              {pending}
+            </Text>
+
+            <Text
+              style={[styles.summaryLabel, { color: colors.secondaryText }]}
+            >
+              Pendientes
+            </Text>
+          </View>
+        </View>
+
+        {/* encabezado de actividades */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Actividades del día
+          </Text>
+        </View>
+
+        {/* lista de actividades */}
+        <View style={styles.activitiesList}>
+          {visibleActivities.length === 0 ? (
+            <View
+              style={[
+                styles.emptyCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="calendar-clear-outline"
+                size={32}
+                color={colors.secondaryText}
+              />
+
+              <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                No hay actividades registradas para este día.
+              </Text>
+            </View>
+          ) : (
+            visibleActivities.map((activity) => (
+              <Pressable
+                key={activity.id}
+                style={[
+                  styles.activityCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => console.log(activity.title)}
+              >
+                <View
+                  style={[
+                    styles.activityAccent,
+                    {
+                      backgroundColor: activity.color,
+                    },
+                  ]}
+                />
+
+                <View style={styles.activityTime}>
+                  <Text style={[styles.startTime, { color: colors.text }]}>
+                    {activity.start}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.endTime,
+                      {
+                        color: colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    {activity.end}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name={activity.icon}
+                  size={26}
+                  color={activity.color}
+                />
+
+                <View style={styles.activityInfo}>
+                  <Text
+                    style={[styles.activityTitle, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
+                    {activity.title}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.activityDuration,
+                      {
+                        color: colors.secondaryText,
+                      },
+                    ]}
+                  >
+                    Duración: {activity.duration}
+                  </Text>
+                </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={colors.secondaryText}
+                />
+              </Pressable>
+            ))
+          )}
+        </View>
+      </ScrollView>
+
+      {/* boton flotante */}
+      <Pressable
+        style={[
+          styles.floatingButton,
+          {
+            position: "absolute",
+            right: 22,
+            bottom: 130,
+            backgroundColor: colors.forest,
+          },
+        ]}
+        onPress={() => console.log("Nueva actividad")}
+      >
+        <Ionicons name="add" size={32} color="#FFFFFF" />
+      </Pressable>
+
+      {/* navegacion inferior */}
+      <View
+        style={[
+          styles.bottomNav,
+          {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+          },
+        ]}
+      >
+        {[
+          {
+            icon: "home-outline",
+            label: "Inicio",
+          },
+          {
+            icon: "calendar-outline",
+            label: "Calendario",
+          },
+          {
+            icon: "document-text-outline",
+            label: "Posts",
+          },
+          {
+            icon: "settings-outline",
+            label: "Ajustes",
+          },
+        ].map((item, index) => (
+          <Pressable
+            key={item.label}
+            style={styles.navItem}
+            onPress={() => {
+              if (item.label === "Inicio") {
+                router.replace("/");
+              } else if (item.label === "Calendario") {
+                router.replace("/calendario");
+              } else {
+                console.log(item.label);
+              }
+            }}
+          >
+            <Ionicons
+              name={item.icon as IconName}
+              size={23}
+              color={index === 0 ? colors.forest : colors.secondaryText}
+            />
+
+            <Text
+              style={[
+                styles.navLabel,
+                {
+                  color: index === 0 ? colors.forest : colors.secondaryText,
+                },
+              ]}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  safeArea: {
+
+  scroll: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 110,
+    gap: 24,
+  },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  headerText: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    gap: 6,
   },
-  title: {
-    textAlign: 'center',
+
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
   },
-  code: {
-    textTransform: 'uppercase',
+
+  brandText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+
+  greeting: {
+    fontSize: 29,
+    fontWeight: "bold",
+  },
+
+  dateText: {
+    fontSize: 14,
+  },
+
+  iconButton: {
+    padding: 12,
+    borderRadius: 14,
+  },
+
+  calendarCard: {
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    gap: 18,
+  },
+
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  calendarControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  calendarControl: {
+    padding: 5,
+  },
+
+  monthTitle: {
+    fontSize: 19,
+    fontWeight: "bold",
+    textTransform: "capitalize",
+  },
+
+  weekRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  dayItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 9,
+    borderRadius: 14,
+    gap: 8,
+  },
+
+  dayName: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  dayNumber: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+
+  dayDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+
+  summaryItem: {
+    flex: 1,
+    minWidth: 0,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    gap: 5,
+  },
+
+  summaryNumber: {
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+
+  summaryLabel: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+
+  sectionDate: {
+    fontSize: 12,
+    textTransform: "capitalize",
+  },
+
+  activitiesList: {
+    gap: 10,
+  },
+
+  emptyCard: {
+    borderWidth: 1,
+    borderRadius: 15,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+
+  activityCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 15,
+    minHeight: 76,
+    overflow: "hidden",
+    gap: 10,
+    paddingRight: 12,
+  },
+
+  activityAccent: {
+    width: 6,
+    alignSelf: "stretch",
+  },
+
+  activityTime: {
+    width: 48,
+    gap: 6,
+  },
+
+  startTime: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+
+  endTime: {
+    fontSize: 11,
+  },
+
+  activityInfo: {
+    flex: 1,
+    gap: 5,
+  },
+
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+
+  activityDuration: {
+    fontSize: 11,
+  },
+
+  floatingButton: {
+    position: "absolute",
+    right: 22,
+    bottom: 88,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+
+  bottomNav: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    paddingTop: 12,
+    paddingBottom: 18,
+  },
+
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+  },
+
+  navLabel: {
+    fontSize: 11,
   },
 });
