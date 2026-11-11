@@ -1,3 +1,7 @@
+import { useActivities } from "@/contexts/activities";
+import { useAppTheme } from "@/contexts/app-theme";
+import { dateKey, occursOn } from "@/utils/activity";
+import { formatTime } from "@/utils/time";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -11,12 +15,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "../constants/theme";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 type Activity = {
-  id: number;
+  id: number | string;
   title: string;
   start: string;
   end: string;
@@ -115,15 +118,14 @@ function formatDate(date: Date): string {
 }
 
 export default function HomeScreen() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, setDarkMode, colors } = useAppTheme();
+  const { activities: savedActivities } = useActivities();
 
   // fecha actual del dispositivo
   const [today, setToday] = useState(() => new Date());
 
   // dia seleccionado
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-
-  const colors = darkMode ? Colors.dark : Colors.light;
 
   // semana del dia seleccionado
   const week = getWeek(selectedDate);
@@ -153,7 +155,21 @@ export default function HomeScreen() {
   };
 
   // muestra los ejemplos solo en el dia actual
-  const visibleActivities = isSameDay(selectedDate, today) ? activities : [];
+  const visibleActivities: Activity[] = [
+    ...(isSameDay(selectedDate, today) ? activities : []),
+    ...savedActivities
+      .filter((activity) => occursOn(activity, selectedDate))
+      .map((activity) => ({
+        id: activity.id,
+        title: activity.title,
+        start: activity.time,
+        end: "",
+        duration: "Sin duración",
+        icon: "document-text-outline" as IconName,
+        color: colors.blue,
+        completed: false,
+      })),
+  ].sort((a, b) => a.start.localeCompare(b.start));
 
   const completed = visibleActivities.filter(
     (activity) => activity.completed,
@@ -173,6 +189,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
@@ -448,7 +465,7 @@ export default function HomeScreen() {
 
                 <View style={styles.activityTime}>
                   <Text style={[styles.startTime, { color: colors.text }]}>
-                    {activity.start}
+                    {formatTime(activity.start)}
                   </Text>
 
                   <Text
@@ -459,7 +476,7 @@ export default function HomeScreen() {
                       },
                     ]}
                   >
-                    {activity.end}
+                    {formatTime(activity.end)}
                   </Text>
                 </View>
 
@@ -507,75 +524,21 @@ export default function HomeScreen() {
           {
             position: "absolute",
             right: 22,
-            bottom: 130,
+            bottom: 20,
             backgroundColor: colors.forest,
           },
         ]}
-        onPress={() => console.log("Nueva actividad")}
+        accessibilityRole="button"
+        accessibilityLabel="Nueva actividad"
+        onPress={() =>
+          router.push({
+            pathname: "/nueva-actividad",
+            params: { date: dateKey(selectedDate) },
+          })
+        }
       >
         <Ionicons name="add" size={32} color="#FFFFFF" />
       </Pressable>
-
-      {/* navegacion inferior */}
-      <View
-        style={[
-          styles.bottomNav,
-          {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
-        {[
-          {
-            icon: "home-outline",
-            label: "Inicio",
-          },
-          {
-            icon: "calendar-outline",
-            label: "Calendario",
-          },
-          {
-            icon: "document-text-outline",
-            label: "Posts",
-          },
-          {
-            icon: "settings-outline",
-            label: "Ajustes",
-          },
-        ].map((item, index) => (
-          <Pressable
-            key={item.label}
-            style={styles.navItem}
-            onPress={() => {
-              if (item.label === "Inicio") {
-                router.replace("/");
-              } else if (item.label === "Calendario") {
-                router.replace("/calendario");
-              } else {
-                console.log(item.label);
-              }
-            }}
-          >
-            <Ionicons
-              name={item.icon as IconName}
-              size={23}
-              color={index === 0 ? colors.forest : colors.secondaryText}
-            />
-
-            <Text
-              style={[
-                styles.navLabel,
-                {
-                  color: index === 0 ? colors.forest : colors.secondaryText,
-                },
-              ]}
-            >
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
     </SafeAreaView>
   );
 }
@@ -702,19 +665,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
     borderWidth: 1,
     borderRadius: 16,
-    paddingVertical: 15,
+    paddingVertical: 1,
     paddingHorizontal: 8,
     alignItems: "center",
     gap: 5,
   },
 
   summaryNumber: {
-    fontSize: 22,
+    fontSize: 15,
     fontWeight: "bold",
   },
 
   summaryLabel: {
-    fontSize: 11,
+    fontSize: 10,
     textAlign: "center",
   },
 
@@ -800,29 +763,12 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: "absolute",
     right: 22,
-    bottom: 88,
+    bottom: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-  },
-
-  bottomNav: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    paddingTop: 12,
-    paddingBottom: 18,
-  },
-
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-  },
-
-  navLabel: {
-    fontSize: 11,
   },
 });

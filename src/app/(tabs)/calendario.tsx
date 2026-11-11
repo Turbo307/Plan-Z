@@ -10,11 +10,9 @@ import {
 } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "../constants/theme";
+import { useAppTheme } from "@/contexts/app-theme";
 
-type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
 
@@ -74,11 +72,10 @@ function addMonths(date: Date, amount: number): Date {
 }
 
 export default function CalendarioScreen() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, setDarkMode, colors } = useAppTheme();
   const [today, setToday] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
-  const colors = darkMode ? Colors.dark : Colors.light;
 
   const monthDays = getMonthDays(selectedDate);
 
@@ -124,6 +121,7 @@ export default function CalendarioScreen() {
 
   return (
     <SafeAreaView
+      edges={["top", "left", "right"]}
       style={[styles.screen, { backgroundColor: colors.background }]}
     >
       <StatusBar barStyle={darkMode ? "light-content" : "dark-content"} />
@@ -365,70 +363,6 @@ export default function CalendarioScreen() {
         <Ionicons name="add" size={32} color="#FFFFFF" />
       </Pressable>
 
-      {/* navegacion inferior */}
-      <View
-        style={[
-          styles.bottomNav,
-          {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-          },
-        ]}
-      >
-        {[
-          {
-            icon: "home-outline" as IconName,
-            label: "Inicio",
-            route: "/" as const,
-          },
-          {
-            icon: "calendar-outline" as IconName,
-            label: "Calendario",
-            route: "/calendario" as const,
-          },
-          {
-            icon: "document-text-outline" as IconName,
-            label: "Posts",
-            route: null,
-          },
-          {
-            icon: "settings-outline" as IconName,
-            label: "Ajustes",
-            route: null,
-          },
-        ].map((item, index) => (
-          <Pressable
-            key={item.label}
-            style={styles.navItem}
-            onPress={() => {
-              if (item.route === "/") {
-                router.replace("/");
-              } else if (item.route === "/calendario") {
-                router.replace("/calendario");
-              } else {
-                console.log(item.label);
-              }
-            }}
-          >
-            <Ionicons
-              name={item.icon}
-              size={23}
-              color={index === 1 ? colors.forest : colors.secondaryText}
-            />
-
-            <Text
-              style={[
-                styles.navLabel,
-                {
-                  color: index === 1 ? colors.forest : colors.secondaryText,
-                },
-              ]}
-            >
-              {item.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
     </SafeAreaView>
   );
 }
@@ -657,7 +591,7 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: "absolute",
     right: 22,
-    bottom: 130,
+    bottom: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -666,20 +600,4 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  bottomNav: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    paddingTop: 12,
-    paddingBottom: 18,
-  },
-
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-  },
-
-  navLabel: {
-    fontSize: 11,
-  },
 });
