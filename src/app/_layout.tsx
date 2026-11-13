@@ -8,7 +8,9 @@ export default function RootLayout() {
       <ActivitiesProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="login" />
           <Stack.Screen name="nueva-actividad" />
+          <Stack.Screen name="registro" />
         </Stack>
       </ActivitiesProvider>
     </AppThemeProvider>

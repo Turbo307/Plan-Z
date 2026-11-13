@@ -1,10 +1,12 @@
 import { useActivities } from "@/contexts/activities";
 import { useAppTheme } from "@/contexts/app-theme";
+import { obtenerPerfil } from "@/services/api";
 import { dateKey, occursOn } from "@/utils/activity";
+import { obtenerAccessToken } from "@/utils/sesion";
 import { formatTime } from "@/utils/time";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   AppState,
   Pressable,
@@ -120,6 +122,32 @@ function formatDate(date: Date): string {
 export default function HomeScreen() {
   const { darkMode, setDarkMode, colors } = useAppTheme();
   const { activities: savedActivities } = useActivities();
+  const [nombreUsuario, setNombreUsuario] = useState("");
+
+  useFocusEffect(
+    useCallback(() => {
+      let activo = true;
+      setNombreUsuario("");
+
+      const cargarNombre = async () => {
+        try {
+          const token = await obtenerAccessToken();
+          if (!token) return;
+
+          const perfil = await obtenerPerfil(token);
+          if (activo) setNombreUsuario(perfil.username);
+        } catch (error) {
+          console.warn("No se pudo cargar el nombre del usuario", error);
+        }
+      };
+
+      void cargarNombre();
+
+      return () => {
+        activo = false;
+      };
+    }, []),
+  );
 
   // fecha actual del dispositivo
   const [today, setToday] = useState(() => new Date());
@@ -214,14 +242,13 @@ export default function HomeScreen() {
             </View>
 
             <Text style={[styles.greeting, { color: colors.text }]}>
-              Hola, Usuario
+              {nombreUsuario ? `Hola, ${nombreUsuario}` : "Hola"}
             </Text>
 
             <Text style={[styles.dateText, { color: colors.secondaryText }]}>
               {formatDate(today)}
             </Text>
           </View>
-
           <Pressable
             onPress={() => setDarkMode(!darkMode)}
             style={[styles.iconButton, { backgroundColor: colors.surface }]}
